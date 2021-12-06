@@ -9,7 +9,7 @@ import (
 
 
 type GameUI interface {
-	Draw(Level)
+	Draw(*Level)
 }
 
 type Tile rune
@@ -24,7 +24,7 @@ type Level struct {
 }
 
 
-func loadLevelFromFile(filename string) Level {
+func loadLevelFromFile(filename string) *Level {
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
