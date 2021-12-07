@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"image/png"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -33,16 +34,29 @@ func loadTextureIndex() {
 		line = strings.TrimSpace(line)
 		tileRune := game.Tile(line[0])
 		xy := line[1:]
-		splitXy := strings.Split(xy, ",")
-		x, err := strconv.ParseInt(strings.TrimSpace(splitXy[0]), 10, 64)
+		splitXYC := strings.Split(xy, ",")
+		x, err := strconv.ParseInt(strings.TrimSpace(splitXYC[0]), 10, 64)
 		if err != nil {
 			panic(err)
 		}
-		y, err := strconv.ParseInt(strings.TrimSpace(splitXy[1]), 10, 64)
+		y, err := strconv.ParseInt(strings.TrimSpace(splitXYC[1]), 10, 64)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(tileRune, x, y)
+		variationCount, err := strconv.ParseInt(strings.TrimSpace(splitXYC[2]), 10, 64)
+		if err != nil {
+			panic(err)
+		}
+		var rects []sdl.Rect
+		for i := int64(0); i < variationCount; i++ {
+			rects = append(rects, sdl.Rect{int32(x * 32), int32(y * 32), 32, 32})
+			x++
+			if x > 62 {
+				x = 0
+				y++
+			}
+		}
+		textureIndex[tileRune] = rects
 	}
 }
 
@@ -122,8 +136,21 @@ type UI2d struct {
 
 }
 
-func (ui *UI2d) Draw(level *game.Level) {
-	renderer.Copy(textureAtlas, nil, nil)
+func (ui *UI2d) DrawThenGetInput(level *game.Level) game.Input {
+	rand.Seed(1)
+
+	for y, row := range level.Map {
+		for x, tile := range row {
+			if tile != game.Blank {
+				srcRects := textureIndex[tile]
+				srcRect := srcRects[rand.Intn(len(srcRects))]
+				dstRect := sdl.Rect{int32(x * 32), int32(y * 32), 32, 32}
+				renderer.Copy(textureAtlas, &srcRect, &dstRect)
+			}
+		}
+	}
+	renderer.Copy(textureAtlas, &sdl.Rect{21 * 32, 59 * 32, 32, 32}, &sdl.Rect{int32(level.Player.X), int32(level.Player.Y), 32, 32})
+
 	renderer.Present()
-	sdl.Delay(5000)
+	return game.Input()
 }
