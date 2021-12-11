@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/jackmott/rpg/game"
-	"github.com/jackmott/rpg/ui2d"
+	"./game"
+	"./game/ui2d"
 )
 
 

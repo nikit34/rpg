@@ -6,15 +6,24 @@ import (
 )
 
 
-type Input struct {
-	up bool
-	down bool
-	left bool
-	right bool
+type GameUI interface {
+	Draw(*Level)
+	GetInput() *Input
 }
 
-type GameUI interface {
-	DrawThenGetInput(*Level) Input
+type InputType int
+
+const (
+	None InputType = iota
+	Up
+	Down
+	Left
+	Right
+	Quit
+)
+
+type Input struct {
+	Typ InputType
 }
 
 type Tile rune
@@ -22,7 +31,8 @@ type Tile rune
 const (
 	StoneWall Tile = '#'
 	DirtFloor Tile = '.'
-	Door Tile = '|'
+	ClosedDoor Tile = '|'
+	OpenDoor Tile = '/'
 	Blank Tile = 0
 	Pending Tile = -1
 )
@@ -60,7 +70,7 @@ func loadLevelFromFile(filename string) *Level {
 		index++
 	}
 	level := &Level{}
-	level.Map := make([][]Tile, len(levelLines))
+	level.Map = make([][]Tile, len(levelLines))
 	for i := range level.Map {
 		level.Map[i] = make([]Tile, longestRow)
 	}
@@ -74,12 +84,12 @@ func loadLevelFromFile(filename string) *Level {
 			case '#':
 				t = StoneWall
 			case '|':
-				t = Door
+				t = OpenDoor
 			case '.':
 				t = DirtFloor
 			case 'P':
-				level.Player.X = x * 32
-				level.Player.Y = y * 32
+				level.Player.X = x
+				level.Player.Y = y
 				t = Pending
 			default:
 				panic("Invalid character in map")
@@ -91,8 +101,8 @@ func loadLevelFromFile(filename string) *Level {
 		for x, tile := range row {
 			if tile == Pending {
 			SearchLoop:
-				for searchX := x - 1; searchX <= x+1; searchX++ {
-					for searchY := y - 1; searchY <= y+1; searchY++ {
+				for searchX := x - 1; searchX <= x + 1; searchX++ {
+					for searchY := y - 1; searchY <= y + 1; searchY++ {
 						searchTile := level.Map[searchY][searchX]
 						switch searchTile {
 						case DirtFloor:
@@ -109,10 +119,61 @@ func loadLevelFromFile(filename string) *Level {
 	return level
 }
 
+func canWalk(level *Level, x, y int) bool {
+	t := level.Map[y][x]
+	switch t {
+	case StoneWall, ClosedDoor, Blank:
+		return false
+	default:
+		return true
+	}
+}
+
+func checkDoor(level *Level, x, y int) {
+	t := level.Map[y][x]
+	if t == ClosedDoor {
+		level.Map[y][x] = OpenDoor
+	}
+}
+
+func handleInput(level *Level, input *Input) {
+	p := level.Player
+	switch input.Typ {
+	case Up:
+		if canWalk(level, p.X, p.Y - 1) {
+			level.Player.Y--
+		} else {
+			checkDoor(level, p.X, p.Y - 1)
+		}
+	case Down:
+		if canWalk(level, p.X, p.Y + 1) {
+			level.Player.Y++
+		} else {
+			checkDoor(level, p.X, p.Y + 1)
+		}
+	case Left:
+		if canWalk(level, p.X - 1, p.Y) {
+			level.Player.X--
+		} else {
+			checkDoor(level, p.X - 1, p.Y)
+		}
+	case Right:
+		if canWalk(level, p.X + 1, p.Y) {
+			level.Player.X++
+		} else {
+			checkDoor(level, p.X + 1, p.Y)
+		}
+	}
+}
 
 func Run(ui GameUI) {
-	level := loadLevelFromFile("games/maps/level1.map")
+	level := loadLevelFromFile("game/maps/level1.map")
 	for {
-		_ = ui.DrawThenGetInput(level)
+		ui.Draw(level)
+		input := ui.GetInput()
+		if input != nil && input.Typ == Quit {
+			return
+		}
+		handleInput(level, input)
 	}
 }
