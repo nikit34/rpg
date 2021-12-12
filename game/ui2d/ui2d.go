@@ -140,6 +140,7 @@ func init() {
 
 	keyboardState = sdl.GetKeyboardState()
 	prevKeyboardState = make([]uint8, len(keyboardState))
+	
 	for i, v := range keyboardState {
 		prevKeyboardState[i] = v
 	}
