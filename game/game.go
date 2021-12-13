@@ -7,10 +7,20 @@ import (
 	"time"
 )
 
+type Game struct {
+	LevelChans []chan *Level
+	InputChan chan *Input
+	Level *Level
+}
 
-type GameUI interface {
-	Draw(*Level)
-	GetInput() *Input
+func NewGame(numWindows int, levelPath string) *Game {
+	levelChans := make([]chan *Level, numWindows)
+	for i := range levelChans {
+		levelChans[i] = make(chan *Level)
+	}
+	inputChan := make(chan *Input)
+
+	return &Game{levelChans, inputChan, loadLevelFromFile(levelPath)}
 }
 
 type InputType int
@@ -21,12 +31,14 @@ const (
 	Down
 	Left
 	Right
-	Quit
+	QuitGame
+	CloseWindow
 	Search
 )
 
 type Input struct {
 	Typ InputType
+	LevelChannel chan *Level
 }
 
 type Tile rune
@@ -95,6 +107,8 @@ func loadLevelFromFile(filename string) *Level {
 			case '#':
 				t = StoneWall
 			case '|':
+				t = ClosedDoor
+			case '/':
 				t = OpenDoor
 			case '.':
 				t = DirtFloor
@@ -103,11 +117,12 @@ func loadLevelFromFile(filename string) *Level {
 				level.Player.Y = y
 				t = Pending
 			default:
-				panic("Invalid character in map")
+				panic("Invalid character in map!")
 			}
 			level.Map[y][x] = t
 		}
 	}
+
 	for y, row := range level.Map {
 		for x, tile := range row {
 			if tile == Pending {
@@ -147,7 +162,8 @@ func checkDoor(level *Level, pos Pos) {
 	}
 }
 
-func handleInput(ui GameUI, level *Level, input *Input) {
+func (game *Game) handleInput(input *Input) {
+	level := game.Level
 	p := level.Player
 	switch input.Typ {
 	case Up:
@@ -175,11 +191,22 @@ func handleInput(ui GameUI, level *Level, input *Input) {
 			checkDoor(level, Pos{p.X + 1, p.Y})
 		}
 	case Search:
-		astar(ui, level, level.Player.Pos, Pos{2, 2})
+		game.astar(level.Player.Pos, Pos{2, 2})
+	case CloseWindow:
+		close(input.LevelChannel)
+		chanIndex := 0
+		for i, c := range game.LevelChans {
+			if c == input.LevelChannel {
+				chanIndex = i
+				break
+			}
+		}
+		game.LevelChans = append(game.LevelChans[:chanIndex], game.LevelChans[chanIndex+1:]...)
 	}
 }
 
-func bfs(ui GameUI, level *Level, start Pos) {
+func (game *Game) bfs(start Pos) {
+	level := game.Level
 	frontier := make([]Pos, 0, 8)
 	frontier = append(frontier, start)
 	visited := make(map[Pos]bool)
@@ -193,7 +220,6 @@ func bfs(ui GameUI, level *Level, start Pos) {
 			if !visited[next] {
 				frontier = append(frontier, next)
 				visited[next] = true
-				ui.Draw(level)
 				time.Sleep(100 * time.Millisecond)
 			}
 		}
@@ -216,7 +242,8 @@ func getNeighbors(level *Level, pos Pos) []Pos {
 	return neighbors
 }
 
-func astar(ui GameUI, level *Level, start, goal Pos) []Pos {
+func (game *Game) astar(start, goal Pos) []Pos {
+	level := game.Level
 	frontier := make(pqueue, 0, 8)
 	frontier = frontier.push(start, 1)
 
@@ -228,9 +255,9 @@ func astar(ui GameUI, level *Level, start, goal Pos) []Pos {
 
 	level.Debug = make(map[Pos]bool)
 
-
+	var current Pos
 	for len(frontier) > 0 {
-		frontier, current := frontier.pop()
+		frontier, current = frontier.pop()
 
 		if current == goal {
 			path := make([]Pos, 0)
@@ -250,7 +277,6 @@ func astar(ui GameUI, level *Level, start, goal Pos) []Pos {
 
 			for _, pos := range path {
 				level.Debug[pos] = true
-				ui.Draw(level)
 				time.Sleep(100 * time.Millisecond)
 			}
 			return path
@@ -266,7 +292,6 @@ func astar(ui GameUI, level *Level, start, goal Pos) []Pos {
 				priority := newCost + xDist + yDist
 				frontier = frontier.push(next, priority)
 				level.Debug[next] = true
-				ui.Draw(level)
 				time.Sleep(100 * time.Millisecond)
 				cameFrom[next] = current
 			}
@@ -275,14 +300,24 @@ func astar(ui GameUI, level *Level, start, goal Pos) []Pos {
 	return nil
 }
 
-func Run(ui GameUI) {
-	level := loadLevelFromFile("game/maps/level1.map")
-	for {
-		ui.Draw(level)
-		input := ui.GetInput()
-		if input != nil && input.Typ == Quit {
+func (game *Game) Run() {
+
+	for _, lchan := range game.LevelChans {
+		lchan <- game.Level
+	}
+
+	for input := range game.InputChan {
+		if input.Typ == QuitGame {
 			return
 		}
-		handleInput(ui, level, input)
+		game.handleInput(input)
+
+		if len(game.LevelChans) == 0 {
+			return
+		}
+
+		for _, lchan := range game.LevelChans {
+			lchan <- game.Level
+		}
 	}
 }
