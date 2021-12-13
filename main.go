@@ -9,9 +9,10 @@ import (
 
 
 func main() {
-	game := game.NewGame(3, "game/maps/level1.map")
+	numWindows := 1
+	game := game.NewGame(numWindows, "game/maps/level1.map")
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < numWindows; i++ {
 		go func(i int) {
 			runtime.LockOSThread()
 			ui := ui2d.NewUI(game.InputChan, game.LevelChans[i])

@@ -151,17 +151,11 @@ func (ui *ui) imgFileToTexture(filename string) *sdl.Texture {
 }
 
 func init() {
-	sdl.LogSetAllPriority(sdl.LOG_PRIORITY_VERBOSE)
-
 	err := sdl.Init(sdl.INIT_EVERYTHING)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-}
-
-type UI2d struct {
-
 }
 
 func (ui *ui) Draw(level *game.Level) {
@@ -186,30 +180,41 @@ func (ui *ui) Draw(level *game.Level) {
 	offsetY := int32((ui.winHeight / 2) - ui.centerY * 32)
 
 	ui.renderer.Clear()
-
 	ui.r.Seed(1)
 
 	for y, row := range level.Map {
 		for x, tile := range row {
 			if tile != game.Blank {
 				srcRects := ui.textureIndex[tile]
-				lenSrcRects := len(srcRects)
-				if lenSrcRects > 0 {
-					srcRect := srcRects[ui.r.Intn(lenSrcRects)]
-					dstRect := sdl.Rect{int32(x * 32) + offsetX, int32(y * 32) + offsetY, 32, 32}
+				srcRect := srcRects[ui.r.Intn(len(srcRects))]
+				dstRect := sdl.Rect{int32(x*32) + offsetX, int32(y*32) + offsetY, 32, 32}
+				pos := game.Pos{x, y}
 
-					pos := game.Pos{x, y}
-					if level.Debug[pos] {
-						ui.textureAtlas.SetColorMod(128, 0, 0)
-					} else {
-						ui.textureAtlas.SetColorMod(255, 255, 255)
-					}
-					ui.renderer.Copy(ui.textureAtlas, &srcRect, &dstRect)
+				if level.Debug[pos] {
+					ui.textureAtlas.SetColorMod(128, 0, 0)
+				} else {
+					ui.textureAtlas.SetColorMod(255, 255, 255)
 				}
+
+				ui.renderer.Copy(ui.textureAtlas, &srcRect, &dstRect)
 			}
 		}
 	}
-	ui.renderer.Copy(ui.textureAtlas, &sdl.Rect{21 * 32, 59 * 32, 32, 32}, &sdl.Rect{int32(level.Player.X) * 32 + offsetX, int32(level.Player.Y) * 32 + offsetY, 32, 32})
+
+	for pos, monster := range level.Monsters {
+		monsterSrcRect := ui.textureIndex[game.Tile(monster.Rune)][0]
+		ui.renderer.Copy(
+			ui.textureAtlas,
+			&monsterSrcRect,
+			&sdl.Rect{int32(pos.X) * 32 + offsetX, int32(pos.Y) * 32 + offsetY, 32, 32},
+		)
+	}
+	playerSrcRect := ui.textureIndex['@'][0]
+	ui.renderer.Copy(
+		ui.textureAtlas,
+		&playerSrcRect,
+		&sdl.Rect{int32(level.Player.X) * 32 + offsetX, int32(level.Player.Y) * 32 + offsetY, 32, 32},
+	)
 	ui.renderer.Present()
 }
 

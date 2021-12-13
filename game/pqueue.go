@@ -64,7 +64,7 @@ func (pq pqueue) parent(i int) (int, priorityPos) {
 }
 
 func (pq pqueue) left(i int) (bool, int, priorityPos) {
-	index := i*2 + 1
+	index := i * 2 + 1
 	if index < len(pq) {
 		return true, index, pq[index]
 	}
@@ -72,7 +72,7 @@ func (pq pqueue) left(i int) (bool, int, priorityPos) {
 }
 
 func (pq pqueue) right(i int) (bool, int, priorityPos) {
-	index := i*2 + 2
+	index := i * 2 + 2
 	if index < len(pq) {
 		return true, index, pq[index]
 	}
