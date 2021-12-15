@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"math"
 	"os"
+	"fmt"
 )
 
 type Game struct {
@@ -57,17 +58,51 @@ type Pos struct {
 
 type Entity struct {
 	Pos
+	Name string
+	Rune rune
 }
 
 type Player struct {
+	Character
+}
+
+type Character struct {
 	Entity
+	Hitpoints int
+	Strength int
+	Speed float64
+	ActionPoints float64
 }
 
 type Level struct {
 	Map [][]Tile
-	Player Player
+	Player *Player
 	Monsters map[Pos]*Monster
 	Debug map[Pos]bool
+}
+
+type Attackable interface {
+	GetActionPoints() float64
+	SetActionPoints(float64)
+	GetHitPoints() int
+	SetHitPoints(int)
+	GetAttackPower() int
+}
+
+func (c *Character) GetActionPoints() float64 { return c.ActionPoints }
+func (c *Character) SetActionPoints(ap float64) { c.ActionPoints = ap }
+func (c *Character) GetHitPoints() int { return c.Hitpoints }
+func (c *Character) SetHitPoints(hp int) { c.Hitpoints = hp }
+func (c *Character) GetAttackPower() int { return c.Strength }
+
+func Attack(a1, a2 Attackable) {
+	a1.SetActionPoints(a1.GetActionPoints() - 1)
+	a2.SetHitPoints(a2.GetHitPoints() - a1.GetAttackPower())
+
+	if a2.GetHitPoints() > 0 {
+		a2.SetActionPoints(a2.GetActionPoints() - 1)
+		a1.SetHitPoints(a1.GetHitPoints() - a2.GetAttackPower())
+	}
 }
 
 func loadLevelFromFile(filename string) *Level {
@@ -91,6 +126,14 @@ func loadLevelFromFile(filename string) *Level {
 	}
 
 	level := &Level{}
+	level.Player = &Player{}
+	level.Player.Strength = 20
+	level.Player.Hitpoints = 20
+	level.Player.Name = "GoMan"
+	level.Player.Rune = '@'
+	level.Player.Speed = 1.0
+	level.Player.ActionPoints = 0
+
 	level.Map = make([][]Tile, len(levelLines))
 	level.Monsters = make(map[Pos]*Monster)
 
@@ -165,9 +208,18 @@ func checkDoor(level *Level, pos Pos) {
 }
 
 func (player *Player) Move(to Pos, level *Level){
-	_, exists := level.Monsters[to]
+	monster, exists := level.Monsters[to]
 	if !exists {
 		player.Pos = to
+	} else {
+		Attack(level.Player, monster)
+		if monster.Hitpoints <= 0 {
+			delete(level.Monsters, monster.Pos)
+		}
+		if level.Player.Hitpoints <= 0 {
+			fmt.Println("YOU DIED")
+			panic("YOU DIED")
+		}
 	}
 }
 

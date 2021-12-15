@@ -24,8 +24,8 @@ func (pq pqueue) push(pos Pos, priority int) pqueue {
 
 func (pq pqueue) pop() (pqueue, Pos) {
 	result := pq[0].Pos
-	pq[0] = pq[len(pq)-1]
-	pq = pq[:len(pq)-1]
+	pq[0] = pq[len(pq) - 1]
+	pq = pq[:len(pq) - 1]
 
 	if len(pq) == 0 {
 		return pq, result
