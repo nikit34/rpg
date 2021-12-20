@@ -11,6 +11,7 @@ import (
 
 	"../../game"
 	"github.com/veandco/go-sdl2/sdl"
+	"github.com/veandco/go-sdl2/ttf"
 )
 
 
@@ -28,10 +29,19 @@ type ui struct {
 	r *rand.Rand
 	levelChan chan *game.Level
 	inputChan chan *game.Input
+	fontSmall *ttf.Font
+	fontMedium *ttf.Font
+	fontLarge *ttf.Font
+	str2TexSmall map[string]*sdl.Texture
+	str2TexMedium map[string]*sdl.Texture
+	str2TexLarge map[string]*sdl.Texture
 }
 
 func NewUI(inputChan chan *game.Input, levelChan chan *game.Level) *ui {
 	ui := &ui{}
+	str2TexSmall = make(map[string]*sdl.Texture)
+	str2TexMedium = make(map[string]*sdl.Texture)
+	str2TexLarge = make(map[string]*sdl.Texture)
 	ui.inputChan = inputChan
 	ui.levelChan = levelChan
 	ui.r = rand.New(rand.NewSource(1))
@@ -63,7 +73,74 @@ func NewUI(inputChan chan *game.Input, levelChan chan *game.Level) *ui {
 	ui.centerX = -1
 	ui.centerY = -1
 
+	ui.fontSmall, err = ttf.OpenFont("game/ui2d/assets/gothic.ttf", 24)
+	if err != nil {
+		panic(err)
+	}
+
+	ui.fontMedium, err = ttf.OpenFont("game/ui2d/assets/gothic.ttf", 32)
+	if err != nil {
+		panic(err)
+	}
+
+	ui.fontLarge, err = ttf.OpenFont("game/ui2d/assets/gothic.ttf", 64)
+	if err != nil {
+		panic(err)
+	}
+
+	ui.eventBackground = ui.GetSinglePixelTex(&sdl.Color{0, 0, 0, 128})
+	ui.eventBackground.SetBlendMode(sdl.BLENDMODE_BLEND)
+
 	return ui
+}
+
+type FontSize int
+
+const (
+	FontSmall FontSize = iota
+	FontMedium
+	FontLarge
+)
+
+func (ui *ui) stringToTexture(s string, color sdl.Color, size FontSize) *sdl.Texture {
+	var font *ttf.Font
+	switch size {
+	case FontSmall:
+		font = ui.fontSmall
+		tex, exists := ui.str2TexSmall[s]
+		if exists {
+			return tex
+		}
+	case FontMedium:
+		font = ui.fontMedium
+		tex, exists := ui.str2TexMedium[s]
+		if exists {
+			return tex
+		}
+	case FontLarge:
+		font = ui.fontLarge
+		tex, exists := ui.str2TexLarge[s]
+		if exists {
+			return tex
+		}
+	}
+	fontSurface, err := font.RenderUTF8Blended(s, color)
+	if err != nil {
+		panic(err)
+	}
+	tex, err := ui.renderer.CreateTextureFromSurface(fontSurface)
+	if err != nil {
+		panic(err)
+	}
+	switch size {
+	case FontSmall:
+		ui.str2TexSmall[s] = tex
+	case FontMedium:
+		ui.str2TexMedium[s] = tex
+	case FontLarge:
+		ui.str2TexLarge[s] = tex
+	}
+	return tex
 }
 
 func (ui *ui) loadTextureIndex() {
@@ -153,8 +230,11 @@ func (ui *ui) imgFileToTexture(filename string) *sdl.Texture {
 func init() {
 	err := sdl.Init(sdl.INIT_EVERYTHING)
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
+	}
+	err = ttf.Init()
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -184,8 +264,8 @@ func (ui *ui) Draw(level *game.Level) {
 
 	for y, row := range level.Map {
 		for x, tile := range row {
-			if tile != game.Blank {
-				srcRects := ui.textureIndex[tile]
+			if tile != game.Blank && tile.Visible {
+				srcRects := ui.textureIndex[tile.Rune]
 				srcRect := srcRects[ui.r.Intn(len(srcRects))]
 				dstRect := sdl.Rect{int32(x*32) + offsetX, int32(y*32) + offsetY, 32, 32}
 				pos := game.Pos{x, y}
@@ -202,7 +282,7 @@ func (ui *ui) Draw(level *game.Level) {
 	}
 
 	for pos, monster := range level.Monsters {
-		monsterSrcRect := ui.textureIndex[game.Tile(monster.Rune)][0]
+		monsterSrcRect := ui.textureIndex[monster.Rune][0]
 		ui.renderer.Copy(
 			ui.textureAtlas,
 			&monsterSrcRect,
@@ -215,10 +295,52 @@ func (ui *ui) Draw(level *game.Level) {
 		&playerSrcRect,
 		&sdl.Rect{int32(level.Player.X) * 32 + offsetX, int32(level.Player.Y) * 32 + offsetY, 32, 32},
 	)
+	textStart := int32(float64(ui.winHeight) * 0.68)
+	textWidth := int32(float64(ui.winWidth) * 0.25)
+	ui.renderer.Copy(ui.eventBackground, nil, &sdl.Rect{0, textStart, textWidth, int32(ui.winHeight) - textStart})
+
+	i := level.EventPos
+	count := 0
+	_, fontSizeY, _ := ui.fontSmall.SizeUTF8("A")
+	for {
+		event := level.Events[i]
+		if event != "" {
+			tex := ui.stringToTexture(event, sdl.Color{255, 0, 0, 0}, FontSmall)
+			_, _, w, h, _ := tex.Query()
+			ui.renderer.Copy(tex, nil, &sdl.Rect{5, int32(count*fontSizeY) + textStart, w, h})
+		}
+		i = (i + 1) % (len(level.Events))
+		count++
+		if i == level.EventPos {
+			break
+		}
+	}
 	ui.renderer.Present()
 }
 
-func (ui *ui) Run() *game.Input {
+func (ui *ui) keyDownOnce(key uint8) bool {
+	return ui.keyboardState[key] == 1 && ui.prevKeyboardState[key] == 0
+}
+
+func (ui *ui) keyPressed(key uint8) bool {
+	return ui.keyboardState[key] == 0 && ui.prevKeyboardState[key] == 1
+}
+
+func (ui *ui) GetSinglePixelTex(color *sdl.Color) *sdl.Texture {
+	tex, err := ui.renderer.CreateTexture(sdl.PIXELFORMAT_ABGR8888, sdl.TEXTUREACCESS_STATIC, 1, 1)
+	if err != nil {
+		panic(err)
+	}
+	pixels := make([]byte, 4)
+	pixels[0] = color.R
+	pixels[1] = color.G
+	pixels[2] = color.B
+	pixels[3] = color.A
+	tex.Update(nil, pixels, 4) 
+	return tex
+}
+
+func (ui *ui) Run() {
 	for {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch e := event.(type) {

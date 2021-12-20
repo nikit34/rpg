@@ -15,8 +15,8 @@ func NewRat(p Pos) *Monster {
 				Name: "Rat",
 				Rune: 'R',
 			},
-			Hitpoints: 20,
-			Strength: 5,
+			Hitpoints: 200,
+			Strength: 0,
 			Speed: 1.5,
 			ActionPoints: 0.0,
 		},
@@ -44,6 +44,10 @@ func (m *Monster) Update(level *Level){
 	playerPos := level.Player.Pos
 	apInt := int(m.ActionPoints)
 	positions := level.astar(m.Pos, playerPos)
+	if len(positions) == 0 {
+		m.Pass()
+		return
+	}
 	moveIndex := 1
 	for i := 0; i < apInt; i++ {
 		if moveIndex < len(positions) {
@@ -54,14 +58,20 @@ func (m *Monster) Update(level *Level){
 	}
 }
 
+func (m *Monster) Pass() {
+	m.ActionPoints -= m.Speed
+}
+
 func (m *Monster) Move(to Pos, level *Level) {
 	_, exists := level.Monsters[to]
 	if !exists && to != level.Player.Pos {
 		delete(level.Monsters, m.Pos)
 		level.Monsters[to] = m
 		m.Pos = to
-	} else {
-		Attack(m, level.Player)
+		return
+	}
+	if to == level.Player.Pos {
+		level.Attack(&m.Character, &level.Player.Character)
 		if m.Hitpoints <= 0 {
 			delete(level.Monsters, m.Pos)
 		}
