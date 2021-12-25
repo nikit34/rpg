@@ -2,8 +2,8 @@ package game
 
 import (
 	"bufio"
-	"fmt"
 	"math"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -44,7 +44,9 @@ type Input struct {
 
 type Tile struct {
 	Rune rune
+	OverlayRune rune
 	Visible bool
+	Seen bool
 }
 
 const (
@@ -52,6 +54,8 @@ const (
 	DirtFloor = '.'
 	ClosedDoor = '|'
 	OpenDoor = '/'
+	UpStair = 'u'
+	DownStair = 'd'
 	Blank = 0
 	Pending = -1
 )
@@ -108,18 +112,27 @@ func (level *Level) AddEvent(event string) {
 	}
 }
 
-func bresenham(start Pos, end Pos) []Pos {
-	result := make([]Pos, 0)
+func (level *Level) lineOfSight() {
+	pos := level.Player.Pos
+	dist := level.Player.SightRange
+	for y := pos.Y - dist; y <= pos.Y + dist; y++ {
+		for x := pos.X - dist; x <= pos.X + dist; x++ {
+			xDelta := pos.X - x
+			yDelta := pos.Y - y
+			d := math.Sqrt(float64(xDelta * xDelta + yDelta * yDelta))
+			if d <= float64(dist){
+				level.bresenham(pos, Pos{x, y})
+			}
+		}
+	}
+}
+
+func (level *Level) bresenham(start Pos, end Pos) {
 	steep := math.Abs(float64(end.Y - start.Y)) > math.Abs(float64(end.X - start.X))
 	if steep {
 		start.X, start.Y = start.Y, start.X
 		end.X, end.Y = end.Y, end.X
 	}
-	if start.X > end.X {
-		start.X, end.X = end.X, start.X
-		start.Y, end.Y = end.Y, start.Y
-	}
-	deltaX := end.X - start.X
 	deltaY := int(math.Abs(float64(end.Y - start.Y)))
 
 	err := 0
@@ -129,19 +142,47 @@ func bresenham(start Pos, end Pos) []Pos {
 		ystep = -1
 	}
 
-	for x := start.X; x < end.X; x++ {
-		if steep {
-			result = append(result, Pos{y, x})
-		} else {
-			result = append(result, Pos{x, y})
+	if start.X > end.X {
+		deltaX := start.X - end.X
+		for x := start.X; x > end.X; x-- {
+			var pos Pos
+			if steep {
+				pos = Pos{y, x}
+			} else {
+				pos = Pos{x, y}
+			}
+			level.Map[pos.Y][pos.X].Visible = true
+			level.Map[pos.Y][pos.X].Seen = true
+			if !canSeeThrough(level, pos) {
+				return
+			}
+			err += deltaY
+			if 2 * err >= deltaX {
+				y += ystep
+				err -= deltaX
+			}
 		}
-		err += deltaY
-		if 2*err >= deltaX {
-			y += ystep
-			err -= deltaX
+	} else {
+		deltaX := end.X - start.X
+		for x := start.X; x < end.X; x++ {
+			var pos Pos
+			if steep {
+				pos = Pos{y, x}
+			} else {
+				pos = Pos{x, y}
+			}
+			level.Map[pos.Y][pos.X].Visible = true
+			level.Map[pos.Y][pos.X].Seen = true
+			if !canSeeThrough(level, pos) {
+				return
+			}
+			err += deltaY
+			if 2 * err >= deltaX {
+				y += ystep
+				err -= deltaX
+			}
 		}
 	}
-	return result
 }
 
 func loadLevelFromFile(filename string) *Level {
@@ -165,7 +206,8 @@ func loadLevelFromFile(filename string) *Level {
 	}
 
 	level := &Level{}
-	level.Events = make([]string, 0)
+	level.Debug = make(map[Pos]bool)
+	level.Events = make([]string, 10)
 	level.Player = &Player{}
 	level.Player.Strength = 20
 	level.Player.Hitpoints = 20
@@ -173,6 +215,7 @@ func loadLevelFromFile(filename string) *Level {
 	level.Player.Rune = '@'
 	level.Player.Speed = 1.0
 	level.Player.ActionPoints = 0
+	level.Player.SightRange = 7
 
 	level.Map = make([][]Tile, len(levelLines))
 	level.Monsters = make(map[Pos]*Monster)
@@ -216,7 +259,7 @@ func loadLevelFromFile(filename string) *Level {
 	for y, row := range level.Map {
 		for x, tile := range row {
 			if tile.Rune == Pending {
-				level.Map[y][x] = level.bfsFloor(Pos{x, y})
+				level.Map[y][x].Rune = level.bfsFloor(Pos{x, y})
 			}
 		}
 	}
@@ -231,50 +274,52 @@ func canWalk(level *Level, pos Pos) bool {
 	if inRange(level, pos) {
 		t := level.Map[pos.Y][pos.X]
 		switch t.Rune {
-		case StoneWall, ClosedDoor, Blank:
+		case StoneWall, Blank:
+			return false
+		}
+		switch t.OverlayRune {
+		case ClosedDoor:
 			return false
 		}
 		_, exists := level.Monsters[pos]
-		if exists {
-			return false
-		}
-		return true
+		return !exists
 	}
 	return false
 }
 
 func canSeeThrough(level *Level, pos Pos) bool {
-	t := level.Map[pos.Y][pos.X]
-	switch t.Rune {
-	case StoneWall, ClosedDoor, Blank:
-		return false
-	default:
-		return true
+	if inRange(level, pos) {
+		t := level.Map[pos.Y][pos.X]
+		switch t.Rune {
+		case StoneWall, Blank:
+			return false
+		}
+		switch t.OverlayRune {
+		case ClosedDoor:
+			return false
+		default:
+			return true
+		}
 	}
+	return false
 }
 
 func checkDoor(level *Level, pos Pos) {
 	t := level.Map[pos.Y][pos.X]
-	if t.Rune == ClosedDoor {
-		level.Map[pos.Y][pos.X].Rune = OpenDoor
+	if t.OverlayRune == ClosedDoor {
+		level.Map[pos.Y][pos.X].OverlayRune = OpenDoor
+		level.lineOfSight()
 	}
 }
 
 func (player *Player) Move(to Pos, level *Level){
 	player.Pos = to
-	for _, row := range level.Map {
-		for _, tile := range row {
-			tile.Visible = false
+	for y, row := range level.Map {
+		for x := range row {
+			level.Map[y][x].Visible = false
 		}
 	}
-	line := bresenham(player.Pos, Pos{player.Pos.X, player.Pos.Y - player.SightRange})
-	for _, pos := range line {
-		if canSeeThrough(level, pos) {
-			level.Map[pos.Y][pos.X].Visible = true
-		} else {
-			break
-		}
-	}
+	level.lineOfSight()
 }
 
 func (level *Level) resolveMovement(pos Pos) {
@@ -323,7 +368,7 @@ func (game *Game) handleInput(input *Input) {
 	}
 }
 
-func (level *Level) bfsFloor(start Pos) Tile {
+func (level *Level) bfsFloor(start Pos) rune {
 	frontier := make([]Pos, 0, 8)
 	frontier = append(frontier, start)
 	visited := make(map[Pos]bool)
@@ -334,7 +379,7 @@ func (level *Level) bfsFloor(start Pos) Tile {
 		currentTile := level.Map[current.Y][current.X]
 		switch currentTile.Rune {
 			case DirtFloor:
-				return Tile{DirtFloor, false}
+				return DirtFloor
 			default:
 		}
 
@@ -346,7 +391,7 @@ func (level *Level) bfsFloor(start Pos) Tile {
 			}
 		}
 	}
-	return Tile{DirtFloor, false}
+	return DirtFloor
 }
 
 func getNeighbors(level *Level, pos Pos) []Pos {
@@ -419,15 +464,15 @@ func (game *Game) Run() {
 
 	for input := range game.InputChan {
 		if input.Typ == QuitGame {
+			fmt.Print(1)
 			return
 		}
 
-		p := game.Level.Player.Pos
-		line := bresenham(p, Pos{p.X + 5, p.Y - 5})
-		for _, pos := range line {
-			fmt.Println(pos)
-			game.Level.Debug[pos] = true
-		}
+		// p := game.Level.Player.Pos
+		// line := bresenham(p, Pos{p.X + 5, p.Y - 5})
+		// for _, pos := range line {
+		// 	game.Level.Debug[pos] = true
+		// }
 
 		game.handleInput(input)
 

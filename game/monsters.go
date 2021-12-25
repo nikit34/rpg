@@ -19,6 +19,7 @@ func NewRat(p Pos) *Monster {
 			Strength: 0,
 			Speed: 1.5,
 			ActionPoints: 0.0,
+			SightRange: 10.0,
 		},
 	}
 }
@@ -31,10 +32,11 @@ func NewSpider(p Pos) *Monster {
 				Name: "Spider",
 				Rune: 'S',
 			},
-			Hitpoints: 10,
-			Strength: 10,
+			Hitpoints: 200,
+			Strength: 0,
 			Speed: 1.0,
 			ActionPoints: 0.0,
+			SightRange: 10.0,
 		},
 	}
 }
