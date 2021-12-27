@@ -1,7 +1,5 @@
 package game
 
-import "fmt"
-
 
 type Monster struct {
 	Character
@@ -15,11 +13,12 @@ func NewRat(p Pos) *Monster {
 				Name: "Rat",
 				Rune: 'R',
 			},
-			Hitpoints: 200,
+			Hitpoints: 20,
 			Strength: 0,
 			Speed: 1.5,
 			ActionPoints: 0.0,
 			SightRange: 10.0,
+			Items: []*Item{NewSword(Pos{})},
 		},
 	}
 }
@@ -64,6 +63,18 @@ func (m *Monster) Pass() {
 	m.ActionPoints -= m.Speed
 }
 
+func (m *Monster) Kill(level *Level) {
+	delete(level.Monsters, m.Pos)
+
+	groundItems := level.Items[m.Pos]
+	for _, item := range m.Items {
+		item.Pos = m.Pos
+		groundItems = append(groundItems, item)
+	}
+	level.Items[m.Pos] = groundItems
+}
+
+
 func (m *Monster) Move(to Pos, level *Level) {
 	_, exists := level.Monsters[to]
 	if !exists && to != level.Player.Pos {
@@ -75,10 +86,9 @@ func (m *Monster) Move(to Pos, level *Level) {
 	if to == level.Player.Pos {
 		level.Attack(&m.Character, &level.Player.Character)
 		if m.Hitpoints <= 0 {
-			delete(level.Monsters, m.Pos)
+			m.Kill(level)
 		}
 		if level.Player.Hitpoints <= 0 {
-			fmt.Println("YOU DIED!")
 			panic("DIED")
 		}
 	}

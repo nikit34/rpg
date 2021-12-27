@@ -7,7 +7,7 @@ import (
 
 
 func main() {
-	game := game.NewGame(1, "game/maps/level1.map")
+	game := game.NewGame(1)
 
 	go func() {
 		game.Run()
