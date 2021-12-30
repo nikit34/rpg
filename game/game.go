@@ -29,6 +29,7 @@ func NewGame(numWindows int) *Game {
 	game := &Game{levelChans, inputChan, levels, nil}
 	game.loadWorldFile()
 	game.CurrentLevel.lineOfSight()
+
 	return game
 }
 
@@ -43,11 +44,15 @@ const (
 	TakeAll
 	QuitGame
 	CloseWindow
+	TakeItem
+	DropItem
+	EquipItem
 	Search
 )
 
 type Input struct {
 	Typ InputType
+	Item *Item
 	LevelChannel chan *Level
 }
 
@@ -96,6 +101,8 @@ type Character struct {
 	ActionPoints float64
 	SightRange int
 	Items []*Item
+	Helmet *Item
+	Weapon *Item
 }
 
 type GameEvent int
@@ -106,6 +113,8 @@ const (
 	Attack
 	Hit
 	Portal
+	PickUp
+	Drop
 )
 
 type Level struct {
@@ -118,6 +127,20 @@ type Level struct {
 	EventPos int
 	Debug map[Pos]bool
 	LastEvent GameEvent
+}
+
+func (level *Level) DropItem(itemDrop *Item, character *Character) {
+	pos := character.Pos
+	items := character.Items
+	for i, item := range items {
+		if item == itemDrop {
+			character.Items = append(character.Items[:i], character.Items[i+1:]...)
+			level.Items[pos] = append(level.Items[pos], item)                       // Add to inventory
+			level.AddEvent(character.Name + " dropped 1x " + item.Name)
+			return
+		}
+	}
+	panic("Tried to drop an item we don't have.")
 }
 
 func (level *Level) MoveItem(itemToMove *Item, character *Character) {
@@ -328,7 +351,7 @@ func loadLevels() map[string]*Level {
 
 		level.Map = make([][]Tile, len(levelLines))
 		level.Monsters = make(map[Pos] *Monster)
-		level.Items = make(map[Pos][]*Item)
+		level.Items = make(map[Pos][] *Item)
 		level.Portals = make(map[Pos] *LevelPos)
 
 		for i := range level.Map {
@@ -338,6 +361,7 @@ func loadLevels() map[string]*Level {
 		for y := 0; y < len(level.Map); y++ {
 			line := levelLines[y]
 			for x, c := range line {
+				pos := Pos{x, y}
 				var t Tile
 				t.OverlayRune = Blank
 				switch c {
@@ -370,10 +394,10 @@ func loadLevels() map[string]*Level {
 					level.Player.Y = y
 					t.Rune = Pending
 				case 'R':
-					level.Monsters[Pos{x, y}] = NewRat(Pos{x, y})
+					level.Monsters[pos] = NewRat(pos)
 					t.Rune = Pending
 				case 'S':
-					level.Monsters[Pos{x, y}] = NewSpider(Pos{x, y})
+					level.Monsters[pos] = NewSpider(pos)
 					t.Rune = Pending
 				default:
 					panic("Invalid character in map!")
@@ -479,6 +503,21 @@ func (game *Game) resolveMovement(pos Pos) {
 	}
 }
 
+func equip(c *Character, itemToEquip *Item) {
+	for i, item := range c.Items {
+		if item == itemToEquip {
+			c.Items = append(c.Items[:i], c.Items[i+1:]...)
+			if itemToEquip.Typ == Helmet {
+				c.Helmet = itemToEquip
+			} else if itemToEquip.Typ == Weapon {
+				c.Weapon = itemToEquip
+			}
+			return
+		}
+	}
+	panic("Tried to equip something you don't have.")
+}
+
 func (game *Game) handleInput(input *Input) {
 	level := game.CurrentLevel
 	p := level.Player
@@ -495,6 +534,19 @@ func (game *Game) handleInput(input *Input) {
 	case Right:
 		newPos := Pos{p.X + 1, p.Y}
 		game.resolveMovement(newPos)
+	case TakeItem:
+		level.MoveItem(input.Item, &p.Character)
+		level.LastEvent = PickUp
+	case DropItem:
+		level.DropItem(input.Item, &p.Character)
+		level.LastEvent = Drop
+	case TakeAll:
+		for _, item := range level.Items[p.Pos] {
+			level.MoveItem(item, &p.Character)
+		}
+		level.LastEvent = PickUp
+	case EquipItem:
+		equip(&level.Player.Character, input.Item)
 	case CloseWindow:
 		close(input.LevelChannel)
 		chanIndex := 0
