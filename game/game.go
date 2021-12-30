@@ -161,10 +161,20 @@ func (level *Level) MoveItem(itemToMove *Item, character *Character) {
 func (level *Level) Attack(c1, c2 *Character) {
 	c1.ActionPoints--
 	c1AttackPower := c1.Strength
-	c2.Hitpoints -= c1AttackPower
+
+	if c1.Weapon != nil {
+		c1AttackPower = int(float64(c1AttackPower) * c1.Weapon.power)
+	}
+	damage := c1AttackPower
+
+	if c2.Helmet != nil {
+		damage = int(float64(damage) * (1.0 - c2.Helmet.power))
+	}
+
+	c2.Hitpoints -= damage
 
 	if c2.Hitpoints > 0 {
-		level.AddEvent(c1.Name + " Attacked " + c2.Name + " for " + strconv.Itoa(c1AttackPower))
+		level.AddEvent(c1.Name + " Attacked " + c2.Name + " for " + strconv.Itoa(damage))
 	} else {
 		level.AddEvent(c1.Name + " Killed " + c2.Name)
 	}
@@ -307,8 +317,8 @@ func (game *Game) loadWorldFile() {
 
 func loadLevels() map[string]*Level {
 	player := &Player{}
-	player.Strength = 20
-	player.Hitpoints = 20
+	player.Strength = 5
+	player.Hitpoints = 100
 	player.Name = "GoMan"
 	player.Rune = '@'
 	player.Speed = 1.0
@@ -570,9 +580,9 @@ func (level *Level) bfsFloor(start Pos) rune {
 		current := frontier[0]
 		currentTile := level.Map[current.Y][current.X]
 		switch currentTile.Rune {
-			case DirtFloor:
-				return DirtFloor
-			default:
+		case DirtFloor:
+			return DirtFloor
+		default:
 		}
 
 		frontier = frontier[1:]
@@ -658,12 +668,6 @@ func (game *Game) Run() {
 		if input.Typ == QuitGame {
 			return
 		}
-
-		// p := game.Level.Player.Pos
-		// line := bresenham(p, Pos{p.X + 5, p.Y - 5})
-		// for _, pos := range line {
-		// 	game.Level.Debug[pos] = true
-		// }
 
 		game.handleInput(input)
 
