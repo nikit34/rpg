@@ -12,17 +12,14 @@ import (
 )
 
 type Game struct {
-	LevelChans []chan *Level
+	LevelChans chan *Level
 	InputChan chan *Input
 	Levels map[string]*Level
 	CurrentLevel *Level
 }
 
-func NewGame(numWindows int) *Game {
-	levelChans := make([]chan *Level, numWindows)
-	for i := range levelChans {
-		levelChans[i] = make(chan *Level)
-	}
+func NewGame() *Game {
+	levelChans := make(chan *Level)
 	inputChan := make(chan *Input)
 	levels := loadLevels()
 
@@ -316,14 +313,19 @@ func (game *Game) loadWorldFile() {
 }
 
 func loadLevels() map[string]*Level {
-	player := &Player{}
-	player.Strength = 5
-	player.Hitpoints = 100
-	player.Name = "GoMan"
-	player.Rune = '@'
-	player.Speed = 1.0
-	player.ActionPoints = 0
-	player.SightRange = 7
+	player := &Player{
+		Character: Character {
+			Strength: 5,
+			Hitpoints: 100,
+			Speed: 1.0,
+			ActionPoints: 0,
+			SightRange: 7,
+			Entity: Entity {
+				Name: "GoMan",
+				Rune: '@',
+			},
+		},
+	}
 
 	levels := make(map[string]*Level)
 
@@ -373,16 +375,18 @@ func loadLevels() map[string]*Level {
 			for x, c := range line {
 				pos := Pos{x, y}
 				var t Tile
-				t.OverlayRune = Blank
 				switch c {
 				case ' ', '\t', '\n', '\r':
+					t.OverlayRune = Blank
 					t.Rune = Blank
 				case '#':
+					t.OverlayRune = Blank
 					t.Rune = StoneWall
 				case '|':
 					t.OverlayRune = ClosedDoor
 					t.Rune = Pending
 				case '/':
+					t.OverlayRune = Blank
 					t.Rune = OpenDoor
 				case 'u':
 					t.OverlayRune = UpStair
@@ -391,22 +395,28 @@ func loadLevels() map[string]*Level {
 					t.OverlayRune = DownStair
 					t.Rune = Pending
 				case 's':
+					t.OverlayRune = Blank
 					level.Items[pos] = append(level.Items[pos], NewSword(pos))
 					level.Items[pos] = append(level.Items[pos], NewHelmet(pos))
 					t.Rune = Pending
 				case 'h':
+					t.OverlayRune = Blank
 					level.Items[pos] = append(level.Items[pos], NewHelmet(pos))
 					t.Rune = Pending
 				case '.':
+					t.OverlayRune = Blank
 					t.Rune = DirtFloor
 				case '@':
+					t.OverlayRune = Blank
 					level.Player.X = x
 					level.Player.Y = y
 					t.Rune = Pending
 				case 'R':
+					t.OverlayRune = Blank
 					level.Monsters[pos] = NewRat(pos)
 					t.Rune = Pending
 				case 'S':
+					t.OverlayRune = Blank
 					level.Monsters[pos] = NewSpider(pos)
 					t.Rune = Pending
 				default:
@@ -559,14 +569,6 @@ func (game *Game) handleInput(input *Input) {
 		equip(&level.Player.Character, input.Item)
 	case CloseWindow:
 		close(input.LevelChannel)
-		chanIndex := 0
-		for i, c := range game.LevelChans {
-			if c == input.LevelChannel {
-				chanIndex = i
-				break
-			}
-		}
-		game.LevelChans = append(game.LevelChans[:chanIndex], game.LevelChans[chanIndex+1:]...)
 	}
 }
 
@@ -660,9 +662,7 @@ func (level *Level) astar(start, goal Pos) []Pos {
 
 func (game *Game) Run() {
 
-	for _, lchan := range game.LevelChans {
-		lchan <- game.CurrentLevel
-	}
+	game.LevelChans <- game.CurrentLevel
 
 	for input := range game.InputChan {
 		if input.Typ == QuitGame {
@@ -675,12 +675,6 @@ func (game *Game) Run() {
 			monster.Update(game.CurrentLevel)
 		}
 
-		if len(game.LevelChans) == 0 {
-			return
-		}
-
-		for _, lchan := range game.LevelChans {
-			lchan <- game.CurrentLevel
-		}
+		game.LevelChans <- game.CurrentLevel
 	}
 }
