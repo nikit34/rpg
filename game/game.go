@@ -12,17 +12,14 @@ import (
 )
 
 type Game struct {
-	LevelChans []chan *Level
+	LevelChans chan *Level
 	InputChan chan *Input
 	Levels map[string]*Level
 	CurrentLevel *Level
 }
 
-func NewGame(numWindows int) *Game {
-	levelChans := make([]chan *Level, numWindows)
-	for i := range levelChans {
-		levelChans[i] = make(chan *Level)
-	}
+func NewGame() *Game {
+	levelChans := make(chan *Level)
 	inputChan := make(chan *Input)
 	levels := loadLevels()
 
@@ -559,14 +556,6 @@ func (game *Game) handleInput(input *Input) {
 		equip(&level.Player.Character, input.Item)
 	case CloseWindow:
 		close(input.LevelChannel)
-		chanIndex := 0
-		for i, c := range game.LevelChans {
-			if c == input.LevelChannel {
-				chanIndex = i
-				break
-			}
-		}
-		game.LevelChans = append(game.LevelChans[:chanIndex], game.LevelChans[chanIndex+1:]...)
 	}
 }
 
@@ -660,9 +649,7 @@ func (level *Level) astar(start, goal Pos) []Pos {
 
 func (game *Game) Run() {
 
-	for _, lchan := range game.LevelChans {
-		lchan <- game.CurrentLevel
-	}
+	game.LevelChans <- game.CurrentLevel
 
 	for input := range game.InputChan {
 		if input.Typ == QuitGame {
@@ -675,12 +662,6 @@ func (game *Game) Run() {
 			monster.Update(game.CurrentLevel)
 		}
 
-		if len(game.LevelChans) == 0 {
-			return
-		}
-
-		for _, lchan := range game.LevelChans {
-			lchan <- game.CurrentLevel
-		}
+		game.LevelChans <- game.CurrentLevel
 	}
 }
