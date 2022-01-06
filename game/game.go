@@ -200,6 +200,18 @@ func (level *Level) lineOfSight() {
 	}
 }
 
+func (level *Level) setVisibleSeen(steep bool, x, y int) Pos {
+	var pos Pos
+	if steep {
+		pos = Pos{y, x}
+	} else {
+		pos = Pos{x, y}
+	}
+	level.Map[pos.Y][pos.X].Visible = true
+	level.Map[pos.Y][pos.X].Seen = true
+	return pos
+}
+
 func (level *Level) bresenham(start Pos, end Pos) {
 	steep := math.Abs(float64(end.Y - start.Y)) > math.Abs(float64(end.X - start.X))
 	if steep {
@@ -214,18 +226,10 @@ func (level *Level) bresenham(start Pos, end Pos) {
 	if start.Y >= end.Y {
 		ystep = -1
 	}
-
-	var pos Pos
 	if start.X > end.X {
 		deltaX := start.X - end.X
 		for x := start.X; x > end.X; x-- {
-			if steep {
-				pos = Pos{y, x}
-			} else {
-				pos = Pos{x, y}
-			}
-			level.Map[pos.Y][pos.X].Visible = true
-			level.Map[pos.Y][pos.X].Seen = true
+			pos := level.setVisibleSeen(steep, x, y)
 			if !canSeeThrough(level, pos) {
 				return
 			}
@@ -238,13 +242,7 @@ func (level *Level) bresenham(start Pos, end Pos) {
 	} else {
 		deltaX := end.X - start.X
 		for x := start.X; x < end.X; x++ {
-			if steep {
-				pos = Pos{y, x}
-			} else {
-				pos = Pos{x, y}
-			}
-			level.Map[pos.Y][pos.X].Visible = true
-			level.Map[pos.Y][pos.X].Seen = true
+			pos := level.setVisibleSeen(steep, x, y)
 			if !canSeeThrough(level, pos) {
 				return
 			}
