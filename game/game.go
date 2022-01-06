@@ -215,10 +215,10 @@ func (level *Level) bresenham(start Pos, end Pos) {
 		ystep = -1
 	}
 
+	var pos Pos
 	if start.X > end.X {
 		deltaX := start.X - end.X
 		for x := start.X; x > end.X; x-- {
-			var pos Pos
 			if steep {
 				pos = Pos{y, x}
 			} else {
@@ -238,7 +238,6 @@ func (level *Level) bresenham(start Pos, end Pos) {
 	} else {
 		deltaX := end.X - start.X
 		for x := start.X; x < end.X; x++ {
-			var pos Pos
 			if steep {
 				pos = Pos{y, x}
 			} else {
