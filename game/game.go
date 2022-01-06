@@ -370,7 +370,7 @@ func loadLevels() map[string]*Level {
 			level.Map[i] = make([]Tile, longestRow)
 		}
 
-		for y := 0; y < len(level.Map); y++ {
+		for y, _ := range level.Map {
 			line := levelLines[y]
 			for x, c := range line {
 				pos := Pos{x, y}
