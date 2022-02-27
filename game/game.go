@@ -132,7 +132,7 @@ func (level *Level) DropItem(itemDrop *Item, character *Character) {
 	for i, item := range items {
 		if item == itemDrop {
 			character.Items = append(character.Items[:i], character.Items[i+1:]...)
-			level.Items[pos] = append(level.Items[pos], item)                       // Add to inventory
+			level.Items[pos] = append(level.Items[pos], item)
 			level.AddEvent(character.Name + " dropped 1x " + item.Name)
 			return
 		}

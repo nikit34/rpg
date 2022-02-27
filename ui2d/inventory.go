@@ -1,7 +1,7 @@
 package ui2d
 
 import (
-	"../game"
+	"github.com/rpg_go/game"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
