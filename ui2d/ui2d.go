@@ -95,6 +95,15 @@ type ui struct {
 	prevMouseState *mouseState
 }
 
+func loadSound(sounds []*mix.Chunk, path_asset string) []*mix.Chunk {
+	sound, err := mix.LoadWAV(path_asset)
+	if err != nil {
+		panic(err)
+	}
+	sounds = append(sounds, sound)
+	return sounds
+}
+
 func NewUI(inputChan chan *game.Input, levelChan chan *game.Level) *ui {
 	ui := &ui{}
 	ui.state = UIMain
@@ -171,24 +180,11 @@ func NewUI(inputChan chan *game.Input, levelChan chan *game.Level) *ui {
 	footstepBase := "ui2d/assets/footstep0"
 	for i := 0; i < 10; i++ {
 		footstepFile := footstepBase + strconv.Itoa(i) + ".ogg"
-		footstepSound, err := mix.LoadWAV(footstepFile)
-		if err != nil {
-			panic(err)
-		}
-		ui.sounds.footsteps = append(ui.sounds.footsteps, footstepSound)
+		ui.sounds.footsteps = loadSound(ui.sounds.footsteps, footstepFile)
 	}
 
-	doorOpen1, err := mix.LoadWAV("ui2d/assets/doorOpen_1.ogg")
-	if err != nil {
-		panic(err)
-	}
-	ui.sounds.openingDoors = append(ui.sounds.openingDoors, doorOpen1)
-
-	doorOpen2, err := mix.LoadWAV("ui2d/assets/doorOpen_2.ogg")
-	if err != nil {
-		panic(err)
-	}
-	ui.sounds.openingDoors = append(ui.sounds.openingDoors, doorOpen2)
+	ui.sounds.openingDoors = loadSound(ui.sounds.openingDoors, "ui2d/assets/doorOpen_1.ogg")
+	ui.sounds.openingDoors = loadSound(ui.sounds.openingDoors, "ui2d/assets/doorOpen_2.ogg")
 
 	return ui
 }
