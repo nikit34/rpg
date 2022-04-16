@@ -1,8 +1,9 @@
 package ui2d
 
 import (
-	"github.com/rpg_go/game"
 	"github.com/veandco/go-sdl2/sdl"
+
+	"github.com/nikit34/rpg/game"
 )
 
 func (ui *ui) CheckDroppedItem() *game.Item {

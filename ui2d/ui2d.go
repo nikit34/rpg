@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rpg_go/game"
 	"github.com/veandco/go-sdl2/mix"
 	"github.com/veandco/go-sdl2/sdl"
 	"github.com/veandco/go-sdl2/ttf"
+
+	"github.com/nikit34/rpg/game"
 )
 
 
@@ -120,7 +121,7 @@ func NewUI(inputChan chan *game.Input, levelChan chan *game.Level) *ui {
 	ui.winHeight = 720
 	ui.winWidth = 1280
 
-	window, err := sdl.CreateWindow("RPG", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, int32(ui.winWidth), int32(ui.winHeight), sdl.WINDOW_SHOWN)
+	window, err := sdl.CreateWindow("RPG", int32(sdl.WINDOWPOS_UNDEFINED), int32(sdl.WINDOWPOS_UNDEFINED), int32(ui.winWidth), int32(ui.winHeight), uint32(sdl.WINDOWPOS_UNDEFINED))
 	if err != nil {
 		panic(err)
 	}

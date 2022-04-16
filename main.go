@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/rpg_go/game"
-	"github.com/rpg_go/ui2d"
+	"github.com/nikit34/rpg/game"
+	"github.com/nikit34/rpg/ui2d"
 )
 
 
