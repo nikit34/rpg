@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	"github.com/veandco/go-sdl2/mix"
 	"github.com/veandco/go-sdl2/sdl"
@@ -30,7 +31,7 @@ func getmouseState() *mouseState {
 	rightButton := mouseButtonState & sdl.ButtonRMask()
 
 	var result mouseState
-	result.pos = game.Pos{int(mouseX), int(mouseY)}
+	result.pos = game.Pos{X: int(mouseX), Y: int(mouseY)}
 	result.leftButton = !(leftButton == 0)
 	result.rightButton = !(rightButton == 0)
 
@@ -314,7 +315,7 @@ func (ui *ui) imgFileToTexture(filename string) *sdl.Texture {
 	if err != nil {
 		panic(err)
 	}
-	tex.Update(nil, pixels, w * 4)
+	tex.Update(nil, unsafe.Pointer(&pixels[0]), w * 4)
 
 	err = tex.SetBlendMode(sdl.BLENDMODE_BLEND)
 	if err != nil {
@@ -498,7 +499,7 @@ func (ui *ui) GetSinglePixelTex(color *sdl.Color) *sdl.Texture {
 	pixels[1] = color.G
 	pixels[2] = color.B
 	pixels[3] = color.A
-	tex.Update(nil, pixels, 4)
+	tex.Update(nil, unsafe.Pointer(&pixels[0]), 4)
 	return tex
 }
 
