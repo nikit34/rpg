@@ -7,8 +7,14 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+)
+
+var (
+    _, b, _, _ = runtime.Caller(0)
+    basepath   = filepath.Dir(b)
 )
 
 type Game struct {
@@ -326,7 +332,7 @@ func loadLevels() map[string]*Level {
 
 	levels := make(map[string]*Level)
 
-	filenames, err := filepath.Glob("game/maps/*.map")
+	filenames, err := filepath.Glob(basepath + "/maps/*.map")
 	if err != nil {
 		panic(err)
 	}
