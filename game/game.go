@@ -315,6 +315,13 @@ func (game *Game) loadWorldFile() {
 	}
 }
 
+func getSeparaterPath() string {
+	if runtime.GOOS == "windows" {
+		return "\\"
+	}
+	return "/"
+}
+
 func loadLevels() map[string]*Level {
 	player := &Player{
 		Character: Character {
@@ -338,7 +345,7 @@ func loadLevels() map[string]*Level {
 	}
 	for _, filename := range filenames {
 		extIndex := strings.LastIndex(filename, ".map")
-		lastSlashIndex := strings.LastIndex(filename, "\\")
+		lastSlashIndex := strings.LastIndex(filename, getSeparaterPath())
 		levelName := filename[lastSlashIndex + 1 : extIndex]
 		file, err := os.Open(filename)
 		if err != nil {
