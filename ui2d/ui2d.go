@@ -121,8 +121,8 @@ func NewUI(inputChan chan *game.Input, levelChan chan *game.Level) *ui {
 
 	ui.winHeight = 720
 	ui.winWidth = 1280
-
-	window, err := sdl.CreateWindow("RPG", int32(sdl.WINDOWPOS_UNDEFINED), int32(sdl.WINDOWPOS_UNDEFINED), int32(ui.winWidth), int32(ui.winHeight), uint32(sdl.WINDOWPOS_UNDEFINED))
+	
+	window, err := sdl.CreateWindow("RPG", int32(sdl.WINDOWPOS_UNDEFINED), int32(sdl.WINDOWPOS_UNDEFINED), int32(ui.winWidth), int32(ui.winHeight), uint32(sdl.WINDOW_OPENGL))
 	if err != nil {
 		panic(err)
 	}
