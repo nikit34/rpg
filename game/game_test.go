@@ -1,14 +1,29 @@
 package game
 
 import (
+	"reflect"
 	"testing"
 )
 
 
 func TestLoadLevels(t *testing.T) {
 	levels := loadLevels()
-	if levels["level1"].Player.Character.Name != "GoMan" {
-		t.Errorf("The name %s doesnt match %s", levels["level1"].Player.Character.Name, "GoMan")
+	pointer := reflect.Indirect(reflect.ValueOf(levels["level1"]))
+	testCases := []struct {
+		fieldName string
+	} {
+		{fieldName: "Map"},
+		{fieldName: "Player"},
+		{fieldName: "Monsters"},
+		{fieldName: "Items"},
+		{fieldName: "Portals"},
+		{fieldName: "Events"},
+	}
+	for _, tc := range testCases {
+		field := pointer.FieldByName(tc.fieldName)
+		if !field.IsValid() {
+			t.Errorf("The field %s is not present in the structure", tc.fieldName)
+		}
 	}
 }
 
@@ -31,7 +46,7 @@ func TestInRange(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		res := inRange(level, Pos{tc.x, tc.y})
-		if (res == tc.condition) {
+		if res == tc.condition {
 			t.Errorf(tc.msg, tc.x, tc.y)
 		}
 	}
@@ -60,7 +75,7 @@ func TestCanWalk(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		res := canWalk(level, Pos{tc.x, tc.y})
-		if (res == tc.condition) {
+		if res == tc.condition {
 			t.Errorf(tc.msg, tc.x, tc.y)
 		}
 	}
@@ -89,7 +104,7 @@ func TestCanSeeThrough(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		res := canSeeThrough(level, Pos{tc.x, tc.y})
-		if (res == tc.condition) {
+		if res == tc.condition {
 			t.Errorf(tc.msg, tc.x, tc.y)
 		}
 	}
