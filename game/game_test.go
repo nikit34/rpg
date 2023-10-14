@@ -18,28 +18,21 @@ func TestInRange(t *testing.T) {
 	for i := range level.Map {
 		level.Map[i] = make([]Tile, 6)
 	}
-	x := 0
-	y := -1
-	res := inRange(level, Pos{x, y})
-	if (res) {
-		t.Errorf("Current position {%d, %d} outside the field", x, y)
+	testCases := []struct {
+		x int
+		y int
+		condition bool
+		msg string
+	} {
+		{0, -1, true, "Current position {%d, %d} outside the field"},
+		{6, 6, true, "Current position {%d, %d} outside the field"},
+		{0, 0, false, "Current position {%d, %d} side the field"},
+		{5, 5, false, "Current position {%d, %d} side the field"},
 	}
-	x = 6
-	y = 6
-	res = inRange(level, Pos{x, y})
-	if (res) {
-		t.Errorf("Current position {%d, %d} outside the field", x, y)
-	}
-	x = 0
-	y = 0
-	res = inRange(level, Pos{x, y})
-	if (!res) {
-		t.Errorf("Current position {%d, %d} side the field", x, y)
-	}
-	x = 5
-	y = 5
-	res = inRange(level, Pos{x, y})
-	if (!res) {
-		t.Errorf("Current position {%d, %d} side the field", x, y)
+	for _, tc := range testCases {
+		res := inRange(level, Pos{tc.x, tc.y})
+		if (res == tc.condition) {
+			t.Errorf(tc.msg, tc.x, tc.y)
+		}
 	}
 }
