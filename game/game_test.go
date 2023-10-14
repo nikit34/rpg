@@ -65,3 +65,32 @@ func TestCanWalk(t *testing.T) {
 		}
 	}
 }
+
+func TestCanSeeThrough(t *testing.T) {
+	level := &Level{}
+	level.Map = make([][]Tile, 2)
+	for i := range level.Map {
+		level.Map[i] = make([]Tile, 2)
+	}
+	level.Map[0][0].Rune = DirtFloor
+	level.Map[0][1].OverlayRune = ClosedDoor
+	level.Map[1][0].Rune = DirtFloor
+	level.Map[1][1].Rune = StoneWall
+	testCases := []struct {
+		x int
+		y int
+		condition bool
+		msg string
+	} {
+		{0, 0, false, "You can see {%d, %d}"},
+		{0, 1, false, "You can see {%d, %d}"},
+		{1, 0, true, "You can't see {%d, %d}"},
+		{1, 1, true, "You can't see {%d, %d}"},
+	}
+	for _, tc := range testCases {
+		res := canSeeThrough(level, Pos{tc.x, tc.y})
+		if (res == tc.condition) {
+			t.Errorf(tc.msg, tc.x, tc.y)
+		}
+	}
+}
