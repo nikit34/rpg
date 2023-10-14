@@ -109,3 +109,36 @@ func TestCanSeeThrough(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckDoor(t *testing.T) {
+	level := &Level{}
+	level.Map = make([][]Tile, 2)
+	for i := range level.Map {
+		level.Map[i] = make([]Tile, 2)
+	}
+	level.Player = &Player{
+		Character: Character {
+			SightRange: 7,
+		},
+	}
+	level.Map[0][1].OverlayRune = ClosedDoor
+	testCases := []struct {
+		x int
+		y int
+		overlayRune rune
+		lastEvent GameEvent
+		msg string
+	} {
+		{0, 1, Blank, Move, "You can walk in the door {%d, %d}"},
+		{1, 0, OpenDoor, 47, "You can walk in the door {%d, %d}"},
+	}
+	for _, tc := range testCases {
+		checkDoor(level, Pos{tc.x, tc.y})
+		if level.Map[tc.y][tc.x].OverlayRune != tc.overlayRune {
+			t.Errorf(tc.msg, tc.x, tc.y)
+		}
+		if level.LastEvent != tc.lastEvent {
+			t.Errorf(tc.msg, tc.x, tc.y)
+		}
+	}
+}
