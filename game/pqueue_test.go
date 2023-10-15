@@ -8,14 +8,14 @@ import (
 var pq = pqueue{
 	{Pos{0, 0}, 1},
 	{Pos{0, 1}, 2},
-	{Pos{0, 2}, 3},
+	{Pos{0, 2}, 2},
 	{Pos{0, 3}, 3},
 	{Pos{0, 4}, 3},
-	{Pos{0, 5}, 2},
-	{Pos{0, 6}, 1},
-	{Pos{0, 7}, 1},
-	{Pos{0, 8}, 4},
-	{Pos{0, 9}, 3},
+	{Pos{0, 5}, 3},
+	{Pos{0, 6}, 3},
+	{Pos{0, 7}, 4},
+	{Pos{0, 8}, 5},
+	{Pos{0, 9}, 5},
 }
 
 func TestParent(t *testing.T) {
@@ -60,18 +60,19 @@ func TestRight(t *testing.T) {
 func TestPush(t *testing.T) {
 	pqCopy := make(pqueue, 10)
 	copy(pqCopy, pq)
-	pqCopy = pq.push(Pos{1, 10}, 2)
+	pqItem := priorityPos{
+		Pos{1, 10},
+		2,
+	}
+	pqCopy = pq.push(pqItem.Pos, pqItem.priority)
 	if (!reflect.DeepEqual(pqCopy[:4], pq[:4])) {
 		t.Error("Adding an element changed the original queue in an unexpected way")
 	}
 	if (!reflect.DeepEqual(pqCopy[5:10], pq[5:])) {
 		t.Error("Adding an element changed the original queue in an unexpected way")
 	}
-	pqItem := priorityPos{
-		Pos{1, 10},
-		2,
-	}
 	if (pqCopy[4] != pqItem) {
 		t.Error("The added element is not equal to the last one")
 	}
 }
+
