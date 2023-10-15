@@ -60,15 +60,18 @@ func TestRight(t *testing.T) {
 func TestPush(t *testing.T) {
 	pqCopy := make(pqueue, 10)
 	copy(pqCopy, pq)
-	pqCopy = pq.push(Pos{1, 10}, 3)
-	if (!reflect.DeepEqual(pqCopy[:10], pq)) {
+	pqCopy = pq.push(Pos{1, 10}, 2)
+	if (!reflect.DeepEqual(pqCopy[:4], pq[:4])) {
+		t.Error("Adding an element changed the original queue in an unexpected way")
+	}
+	if (!reflect.DeepEqual(pqCopy[5:10], pq[5:])) {
 		t.Error("Adding an element changed the original queue in an unexpected way")
 	}
 	pqItem := priorityPos{
 		Pos{1, 10},
-		3,
+		2,
 	}
-	if (pqCopy[10] != pqItem) {
+	if (pqCopy[4] != pqItem) {
 		t.Error("The added element is not equal to the last one")
 	}
 }
