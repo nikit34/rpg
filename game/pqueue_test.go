@@ -1,6 +1,7 @@
 package game
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -53,5 +54,21 @@ func TestRight(t *testing.T) {
 	pos := Pos{0, 0}
 	if pqRight.Pos != pos {
 		t.Errorf("Incorrect right node")
+	}
+}
+
+func TestPush(t *testing.T) {
+	pqCopy := make(pqueue, 10)
+	copy(pqCopy, pq)
+	pqCopy = pq.push(Pos{1, 10}, 3)
+	if (!reflect.DeepEqual(pqCopy[:10], pq)) {
+		t.Error("Adding an element changed the original queue in an unexpected way")
+	}
+	pqItem := priorityPos{
+		Pos{1, 10},
+		3,
+	}
+	if (pqCopy[10] != pqItem) {
+		t.Error("The added element is not equal to the last one")
 	}
 }
