@@ -34,10 +34,24 @@ func TestLeft(t *testing.T) {
 		t.Errorf("Incorrect result")
 	}
 	if index != 9 {
-		t.Errorf("Incorrect parent node index")
+		t.Errorf("Incorrect left node index")
 	}
 	pos := Pos{0, 9}
 	if pqLeft.Pos != pos {
-		t.Errorf("Incorrect parent node")
+		t.Errorf("Incorrect left node")
+	}
+}
+
+func TestRight(t *testing.T) {
+	res, index, pqRight := pq.right(4)
+	if res {
+		t.Errorf("Incorrect result")
+	}
+	if index != 0 {
+		t.Errorf("Incorrect right node index")
+	}
+	pos := Pos{0, 0}
+	if pqRight.Pos != pos {
+		t.Errorf("Incorrect right node")
 	}
 }
