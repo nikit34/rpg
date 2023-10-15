@@ -64,7 +64,7 @@ func TestPush(t *testing.T) {
 		Pos{1, 10},
 		2,
 	}
-	pqCopy = pq.push(pqItem.Pos, pqItem.priority)
+	pqCopy = pqCopy.push(pqItem.Pos, pqItem.priority)
 	if (!reflect.DeepEqual(pqCopy[:4], pq[:4])) {
 		t.Error("Adding an element changed the original queue in an unexpected way")
 	}
