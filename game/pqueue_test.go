@@ -76,3 +76,14 @@ func TestPush(t *testing.T) {
 	}
 }
 
+func TestPop(t *testing.T) {
+	pqCopy := make(pqueue, 10)
+	copy(pqCopy, pq)
+	deletedPos := Pos{0, 0}
+	pqCopy, _ = pqCopy.pop()
+	for _, pqCopyItem := range pqCopy {
+		if pqCopyItem.Pos == deletedPos {
+			t.Error("The deleted item was found")
+		}
+	}
+}
